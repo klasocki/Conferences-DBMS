@@ -1,0 +1,4 @@
+ConferenceReservation musi sie laczyc z conference
+Dodac sposob platnosci
+Dodac date waznosci legitymacji studenckiej
+Zmienic na duze litery
