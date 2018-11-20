@@ -1,4 +1,4 @@
 ConferenceReservation musi sie laczyc z conference
 Dodac sposob platnosci
-Dodac date waznosci legitymacji studenckiej
+Dodac do rezerwacji na ile osob ona jest, w tym ile studentow
 Zmienic na duze litery
