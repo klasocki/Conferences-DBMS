@@ -1,4 +1,2 @@
-ConferenceReservation musi sie laczyc z conference
-Dodac sposob platnosci
-Dodac do rezerwacji na ile osob ona jest, w tym ile studentow
-Zmienic na duze litery
+Czy trzeba dodawać checki sprawdzające czy string jest pusty
+Czy lepiej pisać triggery czy checki z funkcjami?

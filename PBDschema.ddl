@@ -2,8 +2,8 @@ CREATE TABLE Conferences
 (
   ID              int IDENTITY              NOT NULL,
   Name            varchar(255)              NOT NULL,
-  StartDate       date                      NULL,
-  EndDate         date                      NULL,
+  StartDate       date                      NOT NULL,
+  EndDate         date                      NOT NULL,
   StudentDiscount numeric(3, 2) DEFAULT 0.0 NOT NULL,
   Description     varchar(3000)             NULL,
   PRIMARY KEY (ID)
