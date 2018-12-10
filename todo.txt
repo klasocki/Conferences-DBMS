@@ -1,2 +1,3 @@
 Czy trzeba dodawać checki sprawdzające czy string jest pusty
-Czy lepiej pisać triggery czy checki z funkcjami?
+Czy trzeba opisy dokumentację do tabel
+Indeksy na klucze obce?
