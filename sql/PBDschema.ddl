@@ -4,6 +4,7 @@ CREATE TABLE Conferences
   Name            varchar(255)              NOT NULL,
   StartDate       date                      NOT NULL,
   EndDate         date                      NOT NULL,
+  Cancelled       bit           DEFAULT 0   NOT NULL,
   StudentDiscount numeric(3, 2) DEFAULT 0.0 NOT NULL,
   Description     varchar(3000)             NULL,
   PRIMARY KEY (ID)
@@ -29,17 +30,16 @@ CREATE TABLE PriceThresholds
 );
 CREATE TABLE Workshops
 (
-    ID              int IDENTITY                NOT NULL,
-    Name            varchar(255)                NOT NULL,
-    Price           numeric(10, 2) DEFAULT 0.00 NOT NULL,
-    StudentDiscount numeric(3, 2)  DEFAULT 0.00 NOT NULL,
-    PlaceLimit      int                         NOT NULL,
-    Description     varchar(3000)               NULL,
-    StartHour       time                        NOT NULL,
-    EndHour         time                        NOT NULL,
-    DayID           int                         NOT NULL,
-    PRIMARY KEY (ID),
-    CONSTRAINT FKWorkshopsToDays FOREIGN KEY (DayID) REFERENCES Days (ID)
+  ID              int IDENTITY                NOT NULL,
+  Name            varchar(255)                NOT NULL,
+  Price           numeric(10, 2) DEFAULT 0.00 NOT NULL,
+  PlaceLimit      int                         NOT NULL,
+  Description     varchar(3000)               NULL,
+  StartHour       time                        NOT NULL,
+  EndHour         time                        NOT NULL,
+  DayID           int                         NOT NULL,
+  PRIMARY KEY (ID),
+  CONSTRAINT FKWorkshopsToDays FOREIGN KEY (DayID) REFERENCES Days (ID)
 );
 CREATE TABLE Clients
 (
@@ -52,27 +52,27 @@ CREATE TABLE Clients
 );
 CREATE TABLE ConferenceReservations
 (
-ID              int IDENTITY NOT NULL,
-ClientID        int          NOT NULL,
-ConferenceID    int          NOT NULL,
-ReservationDate int          NOT NULL,
-PRIMARY KEY (ID),
-CONSTRAINT FKConferenceToClient FOREIGN KEY (ClientID) REFERENCES Clients (ID),
-CONSTRAINT FKConferenceResToConferences FOREIGN KEY (ConferenceID) REFERENCES Conferences (ID)
+  ID              int IDENTITY NOT NULL,
+  ClientID        int          NOT NULL,
+  ConferenceID    int          NOT NULL,
+  ReservationDate int          NOT NULL,
+  PRIMARY KEY (ID),
+  CONSTRAINT FKConferenceToClient FOREIGN KEY (ClientID) REFERENCES Clients (ID),
+  CONSTRAINT FKConferenceResToConferences FOREIGN KEY (ConferenceID) REFERENCES Conferences (ID)
 );
 CREATE TABLE DayReservations
 (
-    ID              int IDENTITY NOT NULL,
-    DayID           int          NOT NULL,
-    PlaceCount      int          NOT NULL,
-    StudentCount    int          NOT NULL,
-    ReservationDate datetime     NOT NULL,
-    Cancelled       bit          NOT NULL,
-    ReservationID   int          NOT NULL,
-    PRIMARY KEY (ID),
+  ID              int IDENTITY  NOT NULL,
+  DayID           int           NOT NULL,
+  PlaceCount      int           NOT NULL,
+  StudentCount    int           NOT NULL,
+  ReservationDate datetime      NOT NULL,
+  Cancelled       bit DEFAULT 0 NOT NULL,
+  ReservationID   int           NOT NULL,
+  PRIMARY KEY (ID),
 
-    CONSTRAINT FKDayReservationsToDays FOREIGN KEY (DayID) REFERENCES Days (ID),
-    CONSTRAINT FKDayReservationsToConfRes FOREIGN KEY (ReservationID) REFERENCES ConferenceReservations (ID)
+  CONSTRAINT FKDayReservationsToDays FOREIGN KEY (DayID) REFERENCES Days (ID),
+  CONSTRAINT FKDayReservationsToConfRes FOREIGN KEY (ReservationID) REFERENCES ConferenceReservations (ID)
 );
 CREATE TABLE Payments
 (
@@ -80,17 +80,17 @@ CREATE TABLE Payments
   ConferenceReservationID int            NOT NULL,
   Amount                  numeric(10, 2) NOT NULL,
   PayDate                 datetime       NOT NULL,
-  Method                  char   NOT NULL,
+  Method                  char           NOT NULL,
   PRIMARY KEY (ID),
   CONSTRAINT FKPaymentsToConfRes FOREIGN KEY (ConferenceReservationID) REFERENCES ConferenceReservations (ID)
 );
 CREATE TABLE WorkshopReservations
 (
-  ID               int IDENTITY NOT NULL,
-  DayReservationID int          NOT NULL,
-  WorkshopID       int          NOT NULL,
-  Cancelled        bit          NOT NULL,
-  PlaceCount       int          NOT NULL,
+  ID               int IDENTITY  NOT NULL,
+  DayReservationID int           NOT NULL,
+  WorkshopID       int           NOT NULL,
+  Cancelled        bit DEFAULT 0 NOT NULL,
+  PlaceCount       int           NOT NULL,
   PRIMARY KEY (ID),
 
   CONSTRAINT FKWorkshopResToDayRes FOREIGN KEY (DayReservationID) REFERENCES DayReservations (ID),
@@ -108,14 +108,14 @@ CREATE TABLE Attendees
 
 CREATE TABLE AttendeesDay
 (
-ID               int IDENTITY NOT NULL,
-DayReservationID int          NOT NULL,
-AttendeeID       int          NOT NULL,
-IsStudent        bit          NOT NULL,
-StudentCardNum   varchar(25)  NULL,
-PRIMARY KEY (ID),
-CONSTRAINT FKAttendeesDayToDayRes FOREIGN KEY (DayReservationID) REFERENCES DayReservations (ID),
-CONSTRAINT FKAttendeesDayToAttendees FOREIGN KEY (AttendeeID) REFERENCES Attendees (ID)
+  ID               int IDENTITY NOT NULL,
+  DayReservationID int          NOT NULL,
+  AttendeeID       int          NOT NULL,
+  IsStudent        bit          NOT NULL,
+  StudentCardNum   varchar(25)  NULL,
+  PRIMARY KEY (ID),
+  CONSTRAINT FKAttendeesDayToDayRes FOREIGN KEY (DayReservationID) REFERENCES DayReservations (ID),
+  CONSTRAINT FKAttendeesDayToAttendees FOREIGN KEY (AttendeeID) REFERENCES Attendees (ID)
 );
 CREATE TABLE AttendeesWorkshop
 (
