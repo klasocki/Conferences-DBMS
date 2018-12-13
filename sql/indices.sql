@@ -1,0 +1,3 @@
+CREATE CLUSTERED INDEX StartDate_INDEX ON Conferences (StartDate)
+CREATE NONCLUSTERED INDEX Name_INDEX ON Conferences(Name)
+
