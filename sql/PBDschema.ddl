@@ -55,7 +55,7 @@ CREATE TABLE ConferenceReservations
   ID              int IDENTITY NOT NULL,
   ClientID        int          NOT NULL,
   ConferenceID    int          NOT NULL,
-  ReservationDate int          NOT NULL,
+  ReservationDate date          NOT NULL,
   PRIMARY KEY (ID),
   CONSTRAINT FKConferenceToClient FOREIGN KEY (ClientID) REFERENCES Clients (ID),
   CONSTRAINT FKConferenceResToConferences FOREIGN KEY (ConferenceID) REFERENCES Conferences (ID)
@@ -66,7 +66,6 @@ CREATE TABLE DayReservations
   DayID           int           NOT NULL,
   PlaceCount      int           NOT NULL,
   StudentCount    int           NOT NULL,
-  ReservationDate datetime      NOT NULL,
   Cancelled       bit DEFAULT 0 NOT NULL,
   ReservationID   int           NOT NULL,
   PRIMARY KEY (ID),
