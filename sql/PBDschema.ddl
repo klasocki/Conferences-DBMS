@@ -46,7 +46,6 @@ CREATE TABLE Clients
   ID          int IDENTITY NOT NULL,
   Name        varchar(100) NOT NULL,
   IsCompany   bit          NOT NULL,
-  CompanyName varchar(100) NULL,
   Email       varchar(100) NOT NULL,
   Phone       varchar(12)  NOT NULL,
 
