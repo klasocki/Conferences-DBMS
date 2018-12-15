@@ -99,3 +99,17 @@ CREATE TRIGGER TooManyWorkshopAttendees ON AttendeesWorkshop
       ROLLBACK
     end
 end
+GO
+
+CREATE TRIGGER DayNumInvalid ON Days
+  AFTER INSERT, UPDATE
+  AS BEGIN
+  IF EXISTS(SELECT * FROM inserted
+    WHERE (SELECT DATEDIFF(day, StartDate, EndDate)
+      FROM Conferences
+      WHERE Conferences.ID = inserted.ConferenceID) < inserted.DayNum)
+    BEGIN
+      THROW 51000, 'Too big day number for this conference', 1
+      ROLLBACK
+    end
+end
