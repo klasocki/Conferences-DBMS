@@ -11,6 +11,8 @@ SELECT Name,
 FROM Conferences
        JOIN Days on Conferences.ID = Days.ConferenceID
 WHERE StartDate > GETDATE()
+GO
+
 
 CREATE VIEW DayReservationDetails AS
 SELECT C.ID as ClientID,
@@ -34,6 +36,7 @@ FROM DayReservations DR
        JOIN Clients C on CR.ClientID = C.ID
        JOIN Conferences Conf on CR.ConferenceID = Conf.ID
        JOIN Days D on Conf.ID = D.ConferenceID
+GO
 
 
 CREATE VIEW ReservationDetails AS
@@ -54,6 +57,8 @@ SELECT ClientID,
        ) as PriceToPayForWorkshops
 FROM DayReservationDetails
 GROUP BY ClientID, ClientName, ReservationId, ConferenceName, ConferenceID
+GO
+
 
 CREATE VIEW TopTenClients
 AS
@@ -66,6 +71,7 @@ SELECT TOP 10 ID,
                  AND Cancelled = 0) as TotalPlacesBooked
 FROM Clients
 ORDER BY TotalPlacesBooked
+GO
 
 
 CREATE VIEW ClientDueAmount
@@ -78,3 +84,33 @@ SELECT ClientID, ClientName,
 FROM ReservationDetails
 WHERE isCancelled = 0
 GROUP BY ClientID, ClientName
+GO
+
+
+CREATE VIEW UnpaidReservations AS
+  SELECT ClientID,
+         ClientName,
+         (SELECT ReservationDate FROM ConferenceReservations
+           WHERE ID = ReservationID) as ReservationDate,
+         (PriceToPayForEntries + PriceToPayForWorkshops) as TotalPriceToPay,
+         (SELECT SUM(Amount) FROM Payments
+           WHERE ConferenceReservationID = ReservationID) as PaidAmount,
+         (- dbo.Balance(ReservationID)) as PriceToPayLeft
+  FROM ReservationDetails
+WHERE isCancelled = 0
+AND dbo.Balance (ReservationID) < 0
+GO
+
+CREATE VIEW OverpaidReservations AS
+  SELECT ClientID,  
+         ClientName,
+         (SELECT ReservationDate FROM ConferenceReservations
+           WHERE ID = ReservationID) as ReservationDate,
+         (PriceToPayForEntries + PriceToPayForWorkshops) as TotalPriceToPay,
+         (SELECT SUM(Amount) FROM Payments
+           WHERE ConferenceReservationID = ReservationID) as PaidAmount,
+         dbo.Balance(ReservationID) as Overpayment
+  FROM ReservationDetails
+WHERE isCancelled = 0
+AND dbo.Balance (ReservationID) > 0
+GO
