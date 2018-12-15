@@ -26,9 +26,6 @@ ALTER TABLE Workshops
   ADD CONSTRAINT CHCKWorkshopHours
     CHECK (StartHour < EndHour)
 ALTER TABLE Workshops
-  ADD CONSTRAINT CHCKWkshpStudentDisc
-  CHECK (0 <= StudentDiscount AND StudentDiscount <= 1)
-ALTER TABLE Workshops
   ADD CONSTRAINT CHCKWorkshopPrice
     CHECK (Price>=0)
   ALTER TABLE Workshops
