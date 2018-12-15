@@ -58,3 +58,12 @@ AS BEGIN
 end
 GO
 
+CREATE FUNCTION ReservationCost(@ReservationID INT)
+  RETURNS NUMERIC(10, 2)
+AS BEGIN
+  RETURN (SELECT PriceToPayForEntries + PriceToPayForWorkshops
+  FROM ReservationDetails)
+end
+GO
+
+
