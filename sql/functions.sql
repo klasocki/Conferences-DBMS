@@ -8,17 +8,34 @@ CREATE FUNCTION WorkshopDetails(@conferenceID INT)
                    StartHour,
                    EndHour,
                    Price,
-                   D.PlaceLimit,
-                   D.PlaceLimit - (
-                     SELECT SUM(PlaceCount)
-                     FROM WorkshopReservations
-                     WHERE WorkshopID = W.ID
-                   ) as PlacesLeft,
+                   W.PlaceLimit,
+                   dbo.WorkshopPlacesLeft(W.ID)
+                     as
+                     PlacesLeft,
                    Description
             FROM Workshops W
-                   JOIN Days D on W.DayID = D.ID
+                   JOIN
+                 Days D
+                 on W.DayID = D.ID
+            WHERE ConferenceID = @conferenceID
           )
 GO
+
+CREATE FUNCTION WorkshopPlacesLeft(@WorkshopID INT)
+  RETURNS INT
+AS
+BEGIN
+  RETURN (SELECT W.PlaceLimit - (
+    SELECT SUM(PlaceCount)
+    FROM WorkshopReservations
+    WHERE WorkshopID = W.ID
+  )
+          FROM Workshops W
+          WHERE ID = @WorkshopID
+  )
+end
+GO
+
 
 CREATE FUNCTION IsCancelled(@ConferenceReservationID INT)
   RETURNS BIT
