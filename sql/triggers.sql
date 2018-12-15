@@ -46,6 +46,7 @@ BEGIN
     end
 end
 GO
+DROP TRIGGER TooManyReservationAttendees
 
 CREATE TRIGGER TooManyReservationAttendees
   ON AttendeesDay
@@ -57,7 +58,7 @@ BEGIN
             WHERE (SELECT PlaceCount
                    FROM DayReservations
                    WHERE DayReservations.ID = inserted.DayReservationID)
-              >= (SELECT COUNT(*)
+              < (SELECT COUNT(*)
                   FROM AttendeesDay
                   WHERE DayReservationID = inserted.DayReservationID)
        ) OR EXISTS(
@@ -66,7 +67,7 @@ BEGIN
          WHERE (SELECT StudentCount
                 FROM DayReservations
                 WHERE DayReservations.ID = inserted.DayReservationID)
-           >= (SELECT COUNT(*)
+           < (SELECT COUNT(*)
                FROM AttendeesDay
                WHERE DayReservationID = inserted.DayReservationID
                  AND AttendeesDay.IsStudent = 1)
@@ -80,3 +81,21 @@ BEGIN
     end
 end
 GO
+
+CREATE TRIGGER TooManyWorkshopAttendees ON AttendeesWorkshop
+  AFTER INSERT
+  AS BEGIN
+  IF EXISTS(SELECT *
+            FROM inserted
+            WHERE (SELECT PlaceCount
+                   FROM WorkshopReservations
+                   WHERE WorkshopReservations.ID = inserted.WorkshopReservationID)
+              < (SELECT COUNT(*)
+                  FROM AttendeesWorkshop
+                  WHERE AttendeesWorkshop.WorkshopReservationID = inserted.WorkshopReservationID)
+       )
+    BEGIN
+      THROW 51000, 'All places of your reservation are already taken', 1
+      ROLLBACK
+    end
+end
