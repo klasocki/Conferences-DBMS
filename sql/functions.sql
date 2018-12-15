@@ -19,15 +19,27 @@ CREATE FUNCTION WorkshopDetails(@conferenceID INT)
                    JOIN Days D on W.DayID = D.ID
           )
 
--- TODO check if this could be simplified
 CREATE FUNCTION IsCancelled(@ConferenceReservationID INT)
   RETURNS BIT
 AS
-  BEGIN
---reservation is cancelled, if it hasn't got any uncancelled day reservations
-    IF ( NOT EXISTS(SELECT * FROM DayReservations
-      WHERE DayReservations.ReservationID = @ConferenceReservationID
-      AND Cancelled = 0) )
-        RETURN 1;
-    RETURN 0;
-  end
+BEGIN
+  --reservation is cancelled, if it hasn't got any uncancelled day reservations
+  IF (NOT EXISTS(SELECT *
+                 FROM DayReservations
+                 WHERE DayReservations.ReservationID = @ConferenceReservationID
+                   AND Cancelled = 0))
+    RETURN 1;
+  RETURN 0;
+end
+
+CREATE FUNCTION Balance(@ConferenceReservationID INT)
+  RETURNS NUMERIC(10, 2)
+AS
+BEGIN
+  RETURN
+    (SELECT (SELECT SUM(Amount)
+             FROM Payments
+             WHERE ConferenceReservationID = @ConferenceReservationID) - (PriceToPayForWorkshops + PriceToPayForEntries)
+     FROM ReservationDetails
+     WHERE @ConferenceReservationID = ReservationID)
+end
