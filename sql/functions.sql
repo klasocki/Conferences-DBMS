@@ -18,6 +18,7 @@ CREATE FUNCTION WorkshopDetails(@conferenceID INT)
             FROM Workshops W
                    JOIN Days D on W.DayID = D.ID
           )
+GO
 
 CREATE FUNCTION IsCancelled(@ConferenceReservationID INT)
   RETURNS BIT
@@ -31,6 +32,7 @@ BEGIN
     RETURN 1;
   RETURN 0;
 end
+GO
 
 CREATE FUNCTION Balance(@ConferenceReservationID INT)
   RETURNS NUMERIC(10, 2)
@@ -43,3 +45,16 @@ BEGIN
      FROM ReservationDetails
      WHERE @ConferenceReservationID = ReservationID)
 end
+GO
+
+CREATE FUNCTION DayPlacesLeft(@DayID INT)
+  RETURNS INT
+AS BEGIN
+  RETURN (
+    SELECT (SELECT PlaceLimit FROM Days WHERE ID = @DayID) -
+           (SELECT SUM(PlaceCount) FROM DayReservations
+             WHERE DayID = @DayID)
+    )
+end
+GO
+
