@@ -50,4 +50,8 @@ CHECK (Method IN ('K', 'G', 'P'))
 ALTER TABLE AttendeesDay
 ADD CONSTRAINT UQ_DayAttendee UNIQUE (AttendeeID, DayReservationID)
 
+ALTER TABLE Days
+ADD CONSTRAINT UQ_ConferenceDayNum UNIQUE (ConferenceID, DayNum)
+
+
 
