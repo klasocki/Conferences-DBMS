@@ -1,6 +1,6 @@
 CREATE TRIGGER ReservationCancelled
   ON DayReservations
-  AFTER UPDATE
+  AFTER INSERT, UPDATE
   AS
 BEGIN
   IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
@@ -11,6 +11,7 @@ BEGIN
     end
 end
 GO
+
 
 CREATE FUNCTION getConferenceID(@DayReservationID INT)
   RETURNS INT
@@ -27,23 +28,35 @@ end
 GO
 
 --TODO this doesnt work
--- drop trigger ConferenceCancelled
--- CREATE TRIGGER ConferenceCancelled
---   ON Conferences
---   AFTER UPDATE
---   AS
--- BEGIN
---   UPDATE DayReservations
---   SET Cancelled = 1
---   WHERE (
---           SELECT ConferenceID
---           FROM ConferenceReservations CR
---                  JOIN
---                DayReservations DR on CR.ID = DR.ReservationID
---           WHERE DR.ID = DayReservations.ID
---         ) = (SELECT inserted.ID FROM inserted)
--- end
--- GO
+drop trigger ConferenceCancelled
+CREATE TRIGGER ConferenceCancelled
+  ON Conferences
+  AFTER UPDATE
+  AS
+BEGIN
+  IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
+    BEGIN
+      SELECT ID FROM DayReservations
+      WHERE  (
+        SELECT ConferenceID
+        FROM ConferenceReservations CR
+               JOIN
+             DayReservations DR on CR.ID = DR.ReservationID
+        WHERE DR.ID = DayReservations.ID
+      ) =  (SELECT inserted.ID FROM inserted);
+      UPDATE DayReservations
+      SET Cancelled = 1
+      WHERE ID IN  (SELECT ID FROM DayReservations DROut
+      WHERE  (
+        SELECT ConferenceID
+        FROM ConferenceReservations CR
+               JOIN
+             DayReservations DR on CR.ID = DR.ReservationID
+        WHERE DR.ID = DROut.ID
+      ) =  (SELECT inserted.ID FROM inserted))
+    end
+end
+GO
 
 CREATE TRIGGER DayReservationNotInConference
   ON DayReservations
@@ -153,13 +166,33 @@ end
 
 CREATE TRIGGER NoStudentCardNum
   ON AttendeesDay
-  AFTER INSERT ,UPDATE 
-  AS BEGIN 
-  IF EXISTS(SELECT * FROM inserted
-    WHERE inserted.IsStudent = 1 
-    AND inserted.StudentCardNum IS NULL
-    ) BEGIN 
-    THROW 51000, 'Student card number is necessary for student attendees', 1
+  AFTER INSERT , UPDATE
+  AS
+BEGIN
+  IF EXISTS(SELECT *
+            FROM inserted
+            WHERE inserted.IsStudent = 1
+              AND inserted.StudentCardNum IS NULL
+    )
+    BEGIN
+      THROW 51000, 'Student card number is necessary for student attendees', 1
+      ROLLBACK
+    end
+end
+
+CREATE TRIGGER TooLateReservation
+  ON ConferenceReservations
+  AFTER INSERT, UPDATE
+  AS BEGIN
+  IF EXISTS(
+    SELECT * FROM inserted WHERE (
+      DATEDIFF(day, inserted.ReservationDate, (
+        SELECT StartDate FROM Conferences
+        WHERE Conferences.ID = inserted.ConferenceID
+        )) < 0
+      )
+    ) BEGIN
+    THROW 51000, 'This conference has already started', 1
       ROLLBACK
   end
 end
