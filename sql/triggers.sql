@@ -150,3 +150,16 @@ BEGIN
       ROLLBACK
     end
 end
+
+CREATE TRIGGER NoStudentCardNum
+  ON AttendeesDay
+  AFTER INSERT ,UPDATE 
+  AS BEGIN 
+  IF EXISTS(SELECT * FROM inserted
+    WHERE inserted.IsStudent = 1 
+    AND inserted.StudentCardNum IS NULL
+    ) BEGIN 
+    THROW 51000, 'Student card number is necessary for student attendees', 1
+      ROLLBACK
+  end
+end
