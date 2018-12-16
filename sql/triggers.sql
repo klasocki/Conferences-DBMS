@@ -36,24 +36,26 @@ CREATE TRIGGER ConferenceCancelled
 BEGIN
   IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
     BEGIN
-      SELECT ID FROM DayReservations
-      WHERE  (
-        SELECT ConferenceID
-        FROM ConferenceReservations CR
-               JOIN
-             DayReservations DR on CR.ID = DR.ReservationID
-        WHERE DR.ID = DayReservations.ID
-      ) =  (SELECT inserted.ID FROM inserted);
+      SELECT ID
+      FROM DayReservations
+      WHERE (
+              SELECT ConferenceID
+              FROM ConferenceReservations CR
+                     JOIN
+                   DayReservations DR on CR.ID = DR.ReservationID
+              WHERE DR.ID = DayReservations.ID
+            ) = (SELECT inserted.ID FROM inserted);
       UPDATE DayReservations
       SET Cancelled = 1
-      WHERE ID IN  (SELECT ID FROM DayReservations DROut
-      WHERE  (
-        SELECT ConferenceID
-        FROM ConferenceReservations CR
-               JOIN
-             DayReservations DR on CR.ID = DR.ReservationID
-        WHERE DR.ID = DROut.ID
-      ) =  (SELECT inserted.ID FROM inserted))
+      WHERE ID IN (SELECT ID
+                   FROM DayReservations DROut
+                   WHERE (
+                           SELECT ConferenceID
+                           FROM ConferenceReservations CR
+                                  JOIN
+                                DayReservations DR on CR.ID = DR.ReservationID
+                           WHERE DR.ID = DROut.ID
+                         ) = (SELECT inserted.ID FROM inserted))
     end
 end
 GO
@@ -183,16 +185,40 @@ end
 CREATE TRIGGER TooLateReservation
   ON ConferenceReservations
   AFTER INSERT, UPDATE
-  AS BEGIN
+  AS
+BEGIN
   IF EXISTS(
-    SELECT * FROM inserted WHERE (
-      DATEDIFF(day, inserted.ReservationDate, (
-        SELECT StartDate FROM Conferences
-        WHERE Conferences.ID = inserted.ConferenceID
-        )) < 0
-      )
-    ) BEGIN
-    THROW 51000, 'This conference has already started', 1
+      SELECT *
+      FROM inserted
+      WHERE (
+          DATEDIFF(day, inserted.ReservationDate, (
+            SELECT StartDate
+            FROM Conferences
+            WHERE Conferences.ID = inserted.ConferenceID
+          )) < 0
+        )
+    )
+    BEGIN
+      THROW 51000, 'This conference has already started', 1
       ROLLBACK
-  end
+    end
+end
+
+CREATE TRIGGER NoPriceForConference
+  ON ConferenceReservations
+  AFTER INSERT
+  AS
+BEGIN
+  IF EXISTS(SELECT *
+            FROM inserted
+            WHERE EXISTS(
+                SELECT *
+                FROM Days
+                WHERE Days.ConferenceID = inserted.ConferenceID
+                  AND NOT EXISTS(SELECT * FROM PriceThresholds WHERE DayID = Days.ID AND DaysBefore = 0)
+              ))
+    BEGIN
+      THROW 51000, 'There must be a PriceThreshold for 0 DaysBefore for every conference Day before you can make any reservations', 1
+      ROLLBACK
+    end
 end
