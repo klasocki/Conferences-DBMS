@@ -121,6 +121,6 @@ CREATE TABLE AttendeesWorkshop
   WorkshopReservationID int NOT NULL,
   AttendeeDayID         int NOT NULL,
   PRIMARY KEY (WorkshopReservationID, AttendeeDayID),
-  CONSTRAINT FKAttendeesToWorkshopRes FOREIGN KEY (WorkshopReservationID) REFERENCES WorkshopReservations (ID),
-  CONSTRAINT FKAttendeesWorkshopToAttendeesDay FOREIGN KEY (AttendeeDayID) REFERENCES AttendeesDay (ID)
+  CONSTRAINT FKAttendeesToWorkshopRes FOREIGN KEY (WorkshopReservationID) REFERENCES WorkshopReservations (ID) ON DELETE CASCADE ,
+  CONSTRAINT FKAttendeesWorkshopToAttendeesDay FOREIGN KEY (AttendeeDayID) REFERENCES AttendeesDay (ID) ON DELETE CASCADE
 );

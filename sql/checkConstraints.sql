@@ -46,3 +46,8 @@ CHECK (Amount > 0)
 ALTER TABLE Payments
 ADD CONSTRAINT CHCKMethod
 CHECK (Method IN ('K', 'G', 'P'))
+
+ALTER TABLE AttendeesDay
+ADD CONSTRAINT UQ_DayAttendee UNIQUE (AttendeeID, DayReservationID)
+
+
