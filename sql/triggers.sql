@@ -3,30 +3,47 @@ CREATE TRIGGER ReservationCancelled
   AFTER UPDATE
   AS
 BEGIN
-  IF (inserted.Cancelled = 1)
+  IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
     BEGIN
       UPDATE WorkshopReservations
       SET Cancelled = 1
-      WHERE DayReservationID = inserted.ID
+      WHERE DayReservationID = (SELECT inserted.ID FROM inserted)
     end
 end
 GO
 
-CREATE TRIGGER ConferenceCancelled
-  ON Conferences
-  AFTER UPDATE
-  AS
+CREATE FUNCTION getConferenceID(@DayReservationID INT)
+  RETURNS INT
+AS
 BEGIN
-  IF (inserted.Cancelled = 1)
-    BEGIN
-      UPDATE DayReservations
-      SET Cancelled = 1
-      WHERE (SELECT ConferenceID
-             FROM ConferenceReservations
-             WHERE ConferenceReservations.ID = ReservationID) = inserted.ID
-    end
+  RETURN (
+    SELECT ConferenceID
+    FROM ConferenceReservations CR
+           JOIN
+         DayReservations DR on CR.ID = DR.ReservationID
+    WHERE DR.ID = @DayReservationID
+  )
 end
 GO
+
+--TODO this doesnt work
+-- drop trigger ConferenceCancelled
+-- CREATE TRIGGER ConferenceCancelled
+--   ON Conferences
+--   AFTER UPDATE
+--   AS
+-- BEGIN
+--   UPDATE DayReservations
+--   SET Cancelled = 1
+--   WHERE (
+--           SELECT ConferenceID
+--           FROM ConferenceReservations CR
+--                  JOIN
+--                DayReservations DR on CR.ID = DR.ReservationID
+--           WHERE DR.ID = DayReservations.ID
+--         ) = (SELECT inserted.ID FROM inserted)
+-- end
+-- GO
 
 CREATE TRIGGER DayReservationNotInConference
   ON DayReservations
@@ -46,7 +63,6 @@ BEGIN
     end
 end
 GO
-DROP TRIGGER TooManyReservationAttendees
 
 CREATE TRIGGER TooManyReservationAttendees
   ON AttendeesDay
@@ -59,8 +75,8 @@ BEGIN
                    FROM DayReservations
                    WHERE DayReservations.ID = inserted.DayReservationID)
               < (SELECT COUNT(*)
-                  FROM AttendeesDay
-                  WHERE DayReservationID = inserted.DayReservationID)
+                 FROM AttendeesDay
+                 WHERE DayReservationID = inserted.DayReservationID)
        ) OR EXISTS(
          SELECT *
          FROM inserted
@@ -68,13 +84,10 @@ BEGIN
                 FROM DayReservations
                 WHERE DayReservations.ID = inserted.DayReservationID)
            < (SELECT COUNT(*)
-               FROM AttendeesDay
-               WHERE DayReservationID = inserted.DayReservationID
-                 AND AttendeesDay.IsStudent = 1)
+              FROM AttendeesDay
+              WHERE DayReservationID = inserted.DayReservationID
+                AND AttendeesDay.IsStudent = 1)
        )
-
-
-
     BEGIN
       THROW 51000, 'All places of your reservation are already taken', 1
       ROLLBACK
@@ -82,18 +95,20 @@ BEGIN
 end
 GO
 
-CREATE TRIGGER TooManyWorkshopAttendees ON AttendeesWorkshop
+CREATE TRIGGER TooManyWorkshopAttendees
+  ON AttendeesWorkshop
   AFTER INSERT
-  AS BEGIN
+  AS
+BEGIN
   IF EXISTS(SELECT *
             FROM inserted
             WHERE (SELECT PlaceCount
                    FROM WorkshopReservations
                    WHERE WorkshopReservations.ID = inserted.WorkshopReservationID)
               < (SELECT COUNT(*)
-                  FROM AttendeesWorkshop
-                  WHERE AttendeesWorkshop.WorkshopReservationID = inserted.WorkshopReservationID)
-       )
+                 FROM AttendeesWorkshop
+                 WHERE AttendeesWorkshop.WorkshopReservationID = inserted.WorkshopReservationID)
+    )
     BEGIN
       THROW 51000, 'All places of your reservation are already taken', 1
       ROLLBACK
@@ -101,13 +116,16 @@ CREATE TRIGGER TooManyWorkshopAttendees ON AttendeesWorkshop
 end
 GO
 
-CREATE TRIGGER DayNumInvalid ON Days
+CREATE TRIGGER DayNumInvalid
+  ON Days
   AFTER INSERT, UPDATE
-  AS BEGIN
-  IF EXISTS(SELECT * FROM inserted
-    WHERE (SELECT DATEDIFF(day, StartDate, EndDate)
-      FROM Conferences
-      WHERE Conferences.ID = inserted.ConferenceID) < inserted.DayNum)
+  AS
+BEGIN
+  IF EXISTS(SELECT *
+            FROM inserted
+            WHERE (SELECT DATEDIFF(day, StartDate, EndDate)
+                   FROM Conferences
+                   WHERE Conferences.ID = inserted.ConferenceID) < inserted.DayNum)
     BEGIN
       THROW 51000, 'Too big day number for this conference', 1
       ROLLBACK
