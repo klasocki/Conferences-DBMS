@@ -56,9 +56,28 @@ BEGIN
              JOIN ConferenceReservations CR ON inserted.ReservationID = CR.ID
              JOIN Days D on inserted.DayID = D.ID
       WHERE D.ConferenceID != CR.ConferenceID
-    ) --(@ResConfID != @DayConfID)
+    )
     BEGIN
       THROW 51000, 'Day of reservation is not a day of the conference associated with this reservation', 1
+      ROLLBACK
+    end
+end
+GO
+
+CREATE TRIGGER WorkshopReservationNotInDay
+  ON WorkshopReservations
+  AFTER INSERT, UPDATE
+  AS
+BEGIN
+  IF EXISTS(
+      SELECT *
+      FROM inserted
+             JOIN DayReservations DR ON inserted.DayReservationID = DR.ID
+             JOIN Workshops W ON W.ID = inserted.WorkshopID
+      WHERE W.DayID != DR.DayID
+    )
+    BEGIN
+      THROW 51000, 'Day of the workshop reserved is not the day associated with this reservation', 1
       ROLLBACK
     end
 end
