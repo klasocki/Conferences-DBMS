@@ -46,7 +46,7 @@ SELECT ClientID,
        dbo.isCancelled(ReservationId) as isCancelled,
        ConferenceName,
        ConferenceID,
-       SUM(AdultCount * PriceForAdult + StudentCount * (1 - StudentDiscount))
+       SUM(ISNULL(PriceForAdult,0) * (AdultCount + StudentCount * (1 - StudentDiscount)))
                                       AS PriceToPayForEntries,
        (SELECT SUM(Price * WR.PlaceCount)
         FROM WorkshopReservations WR
