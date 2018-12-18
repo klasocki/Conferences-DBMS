@@ -77,11 +77,12 @@ BEGIN
 end
 GO
 
+
 CREATE FUNCTION ReservationCost(@ReservationID INT)
   RETURNS NUMERIC(10, 2)
 AS
 BEGIN
-  RETURN (SELECT ISNULL(PriceToPayForEntries + PriceToPayForWorkshops, 0)
+  RETURN (SELECT ISNULL(PriceToPayForEntries,0) + ISNULL(PriceToPayForWorkshops, 0)
           FROM ReservationDetails
           WHERE ReservationID = @ReservationID)
 end
