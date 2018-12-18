@@ -46,7 +46,7 @@ SELECT ClientID,
        dbo.isCancelled(ReservationId) as isCancelled,
        ConferenceName,
        ConferenceID,
-       SUM(ISNULL(PriceForAdult,0) * (AdultCount + StudentCount * (1 - StudentDiscount)))
+       SUM(ISNULL(PriceForAdult, 0) * (AdultCount + StudentCount * (1 - StudentDiscount)))
                                       AS PriceToPayForEntries,
        (SELECT SUM(Price * WR.PlaceCount)
         FROM WorkshopReservations WR
@@ -73,7 +73,6 @@ FROM Clients
 ORDER BY TotalPlacesBooked
 GO
 
-
 CREATE VIEW ClientDueAmount
 AS
 SELECT ClientID,
@@ -82,7 +81,12 @@ SELECT ClientID,
        (SELECT SUM(Amount)
         FROM Payments
                JOIN ConferenceReservations CR on Payments.ConferenceReservationID = CR.ID
-        WHERE ReservationDetails.ClientID = CR.ClientID)  as MoneyPaid
+        WHERE ReservationDetails.ClientID = CR.ClientID)  as MoneyPaid,
+       (SELECT SUM(Amount)
+        FROM Payments
+               JOIN ConferenceReservations CR on Payments.ConferenceReservationID = CR.ID
+        WHERE ReservationDetails.ClientID = CR.ClientID) - SUM(PriceToPayForEntries + PriceToPayForWorkshops)
+                                                          as Balance
 FROM ReservationDetails
 WHERE isCancelled = 0
 GROUP BY ClientID, ClientName
@@ -125,13 +129,13 @@ CREATE VIEW ClientsToCall AS
 SELECT C.ID,
        Name,
        Phone,
-       DR.ID                                                                          as DayReservationID,
+       DR.ID                                                                    as DayReservationID,
        (SELECT COUNT(*)
         FROM AttendeesDay
-        WHERE DayReservationID = DR.ID)                                               as AttendeesFilled,
+        WHERE DayReservationID = DR.ID)                                         as AttendeesFilled,
        (SELECT DATEDIFF(day, GETDATE(), (SELECT StartDate
-                                               FROM Conferences
-                                               WHERE Conferences.ID = ConferenceID))) as DaysToConferenceStart,
+                                         FROM Conferences
+                                         WHERE Conferences.ID = ConferenceID))) as DaysToConferenceStart,
        PlaceCount
 FROM Clients C
        JOIN ConferenceReservations CR on C.ID = CR.ClientID
@@ -140,5 +144,5 @@ WHERE PlaceCount > (SELECT COUNT(*)
                     FROM AttendeesDay
                     WHERE DayReservationID = DR.ID)
   AND (SELECT DATEDIFF(day, GETDATE(), (SELECT StartDate
-                                              FROM Conferences
-                                              WHERE Conferences.ID = ConferenceID))) < 14
+                                        FROM Conferences
+                                        WHERE Conferences.ID = ConferenceID))) < 14
