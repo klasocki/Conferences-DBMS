@@ -29,6 +29,7 @@ BEGIN
     SELECT SUM(PlaceCount)
     FROM WorkshopReservations
     WHERE WorkshopID = W.ID
+      AND Cancelled = 0
   )
           FROM Workshops W
           WHERE ID = @WorkshopID
@@ -72,7 +73,8 @@ BEGIN
     SELECT (SELECT PlaceLimit FROM Days WHERE ID = @DayID) -
            (SELECT SUM(PlaceCount)
             FROM DayReservations
-            WHERE DayID = @DayID)
+            WHERE DayID = @DayID
+              AND Cancelled = 0)
   )
 end
 GO
@@ -82,7 +84,7 @@ CREATE FUNCTION ReservationCost(@ReservationID INT)
   RETURNS NUMERIC(10, 2)
 AS
 BEGIN
-  RETURN (SELECT ISNULL(PriceToPayForEntries,0) + ISNULL(PriceToPayForWorkshops, 0)
+  RETURN (SELECT ISNULL(PriceToPayForEntries, 0) + ISNULL(PriceToPayForWorkshops, 0)
           FROM ReservationDetails
           WHERE ReservationID = @ReservationID)
 end
@@ -97,6 +99,7 @@ CREATE FUNCTION DayAttendees(@DayID INT)
                    JOIN AttendeesDay AD on A.ID = AD.AttendeeID
                    JOIN DayReservations DR on AD.DayReservationID = DR.ID
             WHERE DayID = @DayID
+              AND Cancelled = 0
           )
 GO
 
@@ -111,6 +114,7 @@ CREATE FUNCTION WorkshopAttendees(@WorkshopID INT)
                    JOIN WorkshopReservations WR on AW.WorkshopReservationID = WR.ID
                    JOIN DayReservations DR on WR.DayReservationID = DR.ID
             WHERE WorkshopID = @WorkshopID
+              AND WR.Cancelled = 0
           )
 GO
 

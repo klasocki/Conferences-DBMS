@@ -7,12 +7,13 @@ SELECT Name,
          SELECT SUM(PlaceCount)
          FROM DayReservations
          WHERE DayID = Days.ID
+           AND DayReservations.Cancelled = 0
        ) as FreePlaces
 FROM Conferences
        JOIN Days on Conferences.ID = Days.ConferenceID
 WHERE StartDate > GETDATE()
+  AND Cancelled = 0
 GO
-
 
 CREATE VIEW DayReservationDetails AS
 SELECT C.ID                       as ClientID,
@@ -20,6 +21,7 @@ SELECT C.ID                       as ClientID,
        CR.ID                      as ReservationId,
        Conf.ID                    as ConferenceID,
        Conf.Name                  as ConferenceName,
+       DR.Cancelled,
        DayNum,
        PlaceCount - StudentCount  as AdultCount,
        StudentCount,
@@ -46,7 +48,10 @@ SELECT ClientID,
        dbo.isCancelled(ReservationId) as isCancelled,
        ConferenceName,
        ConferenceID,
-       SUM(ISNULL(PriceForAdult, 0) * (AdultCount + StudentCount * (1 - StudentDiscount)))
+       (SELECT SUM(ISNULL(PriceForAdult, 0) * (AdultCount + StudentCount * (1 - StudentDiscount)))
+        FROM DayReservationDetails as DRD
+        WHERE ReservationId = DRD.ReservationId
+          AND DRD.Cancelled = 0)
                                       AS PriceToPayForEntries,
        (SELECT SUM(Price * WR.PlaceCount)
         FROM WorkshopReservations WR
@@ -54,6 +59,7 @@ SELECT ClientID,
              Workshops W on WR.WorkshopID = W.ID
                JOIN DayReservations R on WR.DayReservationID = R.ID
         WHERE R.ReservationID = DayReservationDetails.ReservationID
+          AND WR.Cancelled = 0
        )                              as PriceToPayForWorkshops
 FROM DayReservationDetails
 GROUP BY ClientID, ClientName, ReservationId, ConferenceName, ConferenceID
@@ -106,7 +112,7 @@ SELECT ClientID,
        (- dbo.Balance(ReservationID))                  as PriceToPayLeft
 FROM ReservationDetails
 WHERE isCancelled = 0
-  AND dbo.Balance(ReservationID) < 0
+AND dbo.Balance(ReservationID) < 0
 GO
 
 CREATE VIEW OverpaidReservations AS
@@ -122,8 +128,9 @@ SELECT ClientID,
        dbo.Balance(ReservationID)                      as Overpayment
 FROM ReservationDetails
 WHERE isCancelled = 0
-  AND dbo.Balance(ReservationID) > 0
+AND dbo.Balance(ReservationID) > 0
 GO
+
 
 CREATE VIEW ClientsToCall AS
 SELECT C.ID,
@@ -140,7 +147,8 @@ SELECT C.ID,
 FROM Clients C
        JOIN ConferenceReservations CR on C.ID = CR.ClientID
        JOIN DayReservations DR on CR.ID = DR.ReservationID
-WHERE PlaceCount > (SELECT COUNT(*)
+WHERE Cancelled = 0
+  AND PlaceCount > (SELECT COUNT(*)
                     FROM AttendeesDay
                     WHERE DayReservationID = DR.ID)
   AND (SELECT DATEDIFF(day, GETDATE(), (SELECT StartDate
