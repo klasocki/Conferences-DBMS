@@ -8,5 +8,5 @@ DROP TABLE ConferenceReservations
 DROP TABLE Clients
 DROP TABLE Workshops
 DROP TABLE Attendees
-DROP TABLE Conferences
 DROP TABLE Days
+DROP TABLE Conferences

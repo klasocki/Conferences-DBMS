@@ -1,34 +1,31 @@
-CREATE TRIGGER ReservationCancelled
+CREATE TRIGGER DayReservationCancelled
   ON DayReservations
-  AFTER INSERT, UPDATE
+  AFTER UPDATE
   AS
 BEGIN
   IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
     BEGIN
       UPDATE WorkshopReservations
       SET Cancelled = 1
-      WHERE DayReservationID = (SELECT inserted.ID FROM inserted)
+      WHERE DayReservationID IN (SELECT inserted.ID FROM inserted)
     end
 end
 GO
 
-
-CREATE FUNCTION getConferenceID(@DayReservationID INT)
-  RETURNS INT
-AS
+CREATE TRIGGER ReservationCancelled
+  ON ConferenceReservations
+  AFTER UPDATE
+  AS
 BEGIN
-  RETURN (
-    SELECT ConferenceID
-    FROM ConferenceReservations CR
-           JOIN
-         DayReservations DR on CR.ID = DR.ReservationID
-    WHERE DR.ID = @DayReservationID
-  )
+  IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
+    BEGIN
+      UPDATE DayReservations
+      SET Cancelled = 1
+      WHERE ReservationID IN (SELECT inserted.ID FROM inserted)
+    end
 end
 GO
 
---TODO this doesnt work
-drop trigger ConferenceCancelled
 CREATE TRIGGER ConferenceCancelled
   ON Conferences
   AFTER UPDATE
@@ -36,26 +33,9 @@ CREATE TRIGGER ConferenceCancelled
 BEGIN
   IF EXISTS(SELECT * FROM inserted WHERE inserted.Cancelled = 1)
     BEGIN
-      SELECT ID
-      FROM DayReservations
-      WHERE (
-              SELECT ConferenceID
-              FROM ConferenceReservations CR
-                     JOIN
-                   DayReservations DR on CR.ID = DR.ReservationID
-              WHERE DR.ID = DayReservations.ID
-            ) = (SELECT inserted.ID FROM inserted);
-      UPDATE DayReservations
+      UPDATE ConferenceReservations
       SET Cancelled = 1
-      WHERE ID IN (SELECT ID
-                   FROM DayReservations DROut
-                   WHERE (
-                           SELECT ConferenceID
-                           FROM ConferenceReservations CR
-                                  JOIN
-                                DayReservations DR on CR.ID = DR.ReservationID
-                           WHERE DR.ID = DROut.ID
-                         ) = (SELECT inserted.ID FROM inserted))
+      WHERE ConferenceID IN (SELECT inserted.ID FROM inserted)
     end
 end
 GO
@@ -108,19 +88,19 @@ BEGIN
             WHERE (SELECT PlaceCount
                    FROM DayReservations
                    WHERE DayReservations.ID = inserted.DayReservationID)
-              < (SELECT COUNT(*)
-                 FROM AttendeesDay
-                 WHERE DayReservationID = inserted.DayReservationID)
+                    < (SELECT COUNT(*)
+                       FROM AttendeesDay
+                       WHERE DayReservationID = inserted.DayReservationID)
        ) OR EXISTS(
          SELECT *
          FROM inserted
          WHERE (SELECT StudentCount
                 FROM DayReservations
                 WHERE DayReservations.ID = inserted.DayReservationID)
-           < (SELECT COUNT(*)
-              FROM AttendeesDay
-              WHERE DayReservationID = inserted.DayReservationID
-                AND AttendeesDay.IsStudent = 1)
+                 < (SELECT COUNT(*)
+                    FROM AttendeesDay
+                    WHERE DayReservationID = inserted.DayReservationID
+                      AND AttendeesDay.IsStudent = 1)
        )
     BEGIN
       THROW 51000, 'All places of your reservation are already taken', 1
@@ -139,9 +119,9 @@ BEGIN
             WHERE (SELECT PlaceCount
                    FROM WorkshopReservations
                    WHERE WorkshopReservations.ID = inserted.WorkshopReservationID)
-              < (SELECT COUNT(*)
-                 FROM AttendeesWorkshop
-                 WHERE AttendeesWorkshop.WorkshopReservationID = inserted.WorkshopReservationID)
+                    < (SELECT COUNT(*)
+                       FROM AttendeesWorkshop
+                       WHERE AttendeesWorkshop.WorkshopReservationID = inserted.WorkshopReservationID)
     )
     BEGIN
       THROW 51000, 'All places of your reservation are already taken', 1
@@ -191,12 +171,12 @@ BEGIN
       SELECT *
       FROM inserted
       WHERE (
-          DATEDIFF(day, inserted.ReservationDate, (
-            SELECT StartDate
-            FROM Conferences
-            WHERE Conferences.ID = inserted.ConferenceID
-          )) < 0
-        )
+                DATEDIFF(day, inserted.ReservationDate, (
+                  SELECT StartDate
+                  FROM Conferences
+                  WHERE Conferences.ID = inserted.ConferenceID
+                )) < 0
+              )
     )
     BEGIN
       THROW 51000, 'This conference has already started', 1
@@ -212,13 +192,44 @@ BEGIN
   IF EXISTS(SELECT *
             FROM inserted
             WHERE EXISTS(
-                SELECT *
-                FROM Days
-                WHERE Days.ConferenceID = inserted.ConferenceID
-                  AND NOT EXISTS(SELECT * FROM PriceThresholds WHERE DayID = Days.ID AND DaysBefore = 0)
-              ))
+                      SELECT *
+                      FROM Days
+                      WHERE Days.ConferenceID = inserted.ConferenceID
+                        AND NOT EXISTS(SELECT * FROM PriceThresholds WHERE DayID = Days.ID AND DaysBefore = 0)
+                    ))
     BEGIN
       THROW 51000, 'There must be a PriceThreshold for 0 DaysBefore for every conference Day before you can make any reservations', 1
+      ROLLBACK
+    end
+end
+GO
+
+
+CREATE TRIGGER InvalidPaymentDate
+  ON Payments AFTER INSERT, UPDATE
+  AS
+BEGIN
+  IF EXISTS(SELECT *
+            FROM inserted
+  --check if payment date is before reservation date, or after
+  --conference start date
+            WHERE (DATEDIFF(day, (SELECT ReservationDate
+                                  FROM ConferenceReservations
+                                  WHERE ID = inserted.ConferenceReservationID),
+                            inserted.PayDate) < 0
+              OR (DATEDIFF(day, inserted.PayDate,
+                           (SELECT StartDate
+                            FROM Conferences
+                                   JOIN
+                                 ConferenceReservations CR
+                                 ON Conferences.ID = CR.ConferenceID
+                                   JOIN inserted
+                                        ON inserted.ConferenceReservationID = CR.ID)
+                    ) < 0)))
+    BEGIN
+      THROW 51000,
+        'There must be a PriceThreshold for 0 DaysBefore for every conference Day before you can make any reservations',
+        1
       ROLLBACK
     end
 end

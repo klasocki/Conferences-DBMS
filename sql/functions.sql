@@ -37,21 +37,6 @@ BEGIN
 end
 GO
 
-
-CREATE FUNCTION IsCancelled(@ConferenceReservationID INT)
-  RETURNS BIT
-AS
-BEGIN
-  --reservation is cancelled, if it hasn't got any uncancelled day reservations
-  IF (NOT EXISTS(SELECT *
-                 FROM DayReservations
-                 WHERE DayReservations.ReservationID = @ConferenceReservationID
-                   AND Cancelled = 0))
-    RETURN 1;
-  RETURN 0;
-end
-GO
-
 CREATE FUNCTION Balance(@ConferenceReservationID INT)
   RETURNS NUMERIC(10, 2)
 AS
